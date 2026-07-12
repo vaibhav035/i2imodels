@@ -1,0 +1,16 @@
+runpod==1.7.9
+
+torch
+torchvision
+transformers
+accelerate
+diffusers
+sentencepiece
+safetensors
+
+Pillow
+requests
+
+huggingface_hub
+
+opencv-python-headless
