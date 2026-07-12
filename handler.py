@@ -1,59 +1,111 @@
 import os
-import uuid
+import io
+import base64
+import logging
+
 import torch
 import runpod
-
+from PIL import Image
 from diffusers import QwenImageEditPipeline
 
-from utils import load_image
+logging.basicConfig(level=logging.INFO)
 
-OUTPUT_DIR = "/tmp"
+MODEL_ID = "Qwen/Qwen-Image-Edit"
 
-print("Loading model...")
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
+logging.info("Loading Qwen Image Edit model...")
 
 pipe = QwenImageEditPipeline.from_pretrained(
-    "Qwen/Qwen-Image-Edit",
-    torch_dtype=torch.bfloat16
+    MODEL_ID,
+    torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32,
 )
 
-pipe.to("cuda")
+pipe.to(DEVICE)
 
-print("Model Ready")
+logging.info("Model loaded successfully.")
+
+
+def decode_base64_image(image_string: str) -> Image.Image:
+    """
+    Convert a base64 string into a PIL Image.
+    Supports strings with or without:
+    data:image/png;base64,...
+    """
+
+    if image_string.startswith("data:image"):
+        image_string = image_string.split(",", 1)[1]
+
+    image_bytes = base64.b64decode(image_string)
+
+    image = Image.open(io.BytesIO(image_bytes))
+
+    return image.convert("RGB")
+
+
+def encode_base64_image(image: Image.Image) -> str:
+    """
+    Convert PIL Image -> Base64 string.
+    """
+
+    buffer = io.BytesIO()
+
+    image.save(buffer, format="PNG")
+
+    return base64.b64encode(buffer.getvalue()).decode("utf-8")
 
 
 def handler(job):
+    try:
+        job_input = job["input"]
 
-    job_input = job["input"]
+        if "image" not in job_input:
+            return {"error": "Missing 'image' field"}
 
-    image = load_image(job_input["image"])
+        if "prompt" not in job_input:
+            return {"error": "Missing 'prompt' field"}
 
-    prompt = job_input["prompt"]
+        image = decode_base64_image(job_input["image"])
 
-    steps = job_input.get("steps", 30)
+        prompt = job_input["prompt"]
 
-    cfg = job_input.get("cfg", 4)
+        steps = int(job_input.get("steps", 30))
 
-    generator = torch.Generator("cuda").manual_seed(
-        job_input.get("seed", 42)
-    )
+        guidance = float(job_input.get("guidance_scale", 4.0))
 
-    result = pipe(
-        image=image,
-        prompt=prompt,
-        num_inference_steps=steps,
-        true_cfg_scale=cfg,
-        generator=generator
-    )
+        seed = job_input.get("seed", None)
 
-    filename = f"{uuid.uuid4()}.png"
+        generator = None
 
-    path = os.path.join(OUTPUT_DIR, filename)
+        if seed is not None:
+            generator = torch.Generator(device=DEVICE).manual_seed(int(seed))
 
-    result.images[0].save(path)
+        logging.info("Running inference...")
 
-    return {
-        "image_path": path
-    }
+        result = pipe(
+            image=image,
+            prompt=prompt,
+            num_inference_steps=steps,
+            true_cfg_scale=guidance,
+            generator=generator,
+        )
+
+        output_image = result.images[0]
+
+        output_b64 = encode_base64_image(output_image)
+
+        return {
+            "success": True,
+            "image": output_b64,
+        }
+
+    except Exception as e:
+        logging.exception("Inference failed")
+
+        return {
+            "success": False,
+            "error": str(e),
+        }
 
 
 runpod.serverless.start(
