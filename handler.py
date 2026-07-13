@@ -3,6 +3,7 @@ import io
 import base64
 import logging
 
+
 import torch
 import runpod
 from PIL import Image
