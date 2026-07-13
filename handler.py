@@ -8,6 +8,7 @@ import torch
 import runpod
 from PIL import Image
 from diffusers import QwenImageEditPlusPipeline
+from tools.prompt_utils import polish_edit_prompt
 
 logging.basicConfig(level=logging.INFO)
 
@@ -72,10 +73,23 @@ def handler(job):
             return {"error": "Missing 'prompt' field"}
 
         image = decode_base64_image(job_input["image"])
-
+        prompt = polish_edit_prompt(prompt, image)
+        logging.info(f"Polished prompt: {prompt}")
+        aspect_ratios = {
+            "1:1": (1328, 1328),
+            "16:9": (1664, 928),
+            "9:16": (928, 1664),
+            "4:3": (1472, 1104),
+            "3:4": (1104, 1472),
+            "3:2": (1584, 1056),
+            "2:3": (1056, 1584),
+        }
         prompt = job_input["prompt"]
 
+        width, height = aspect_ratios["16:9"]
         num_inference_steps = int(job_input.get("num_inference_steps", 40))
+        width=width,
+        height=height
         true_cfg_scale = float(job_input.get("true_cfg_scale", 4.0))
         guidance_scale = float(job_input.get("guidance_scale", 1.0))
         negative_prompt = job_input.get("negative_prompt", " ")
