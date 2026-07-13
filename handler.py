@@ -6,17 +6,22 @@ import logging
 import torch
 import runpod
 from PIL import Image
-from diffusers import QwenImageEditPipeline
+from diffusers import QwenImageEditPlusPipeline
 
 logging.basicConfig(level=logging.INFO)
 
-MODEL_ID = "Qwen/Qwen-Image-Edit"
+#MODEL_ID = "Qwen/Qwen-Image-Edit"
+MODEL_ID = "Qwen/Qwen-Image-Edit-2511"
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 logging.info("Loading Qwen Image Edit model...")
 
-pipe = QwenImageEditPipeline.from_pretrained(
+# pipe = QwenImageEditPipeline.from_pretrained(
+#     MODEL_ID,
+#     torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32,
+# )
+pipe = QwenImageEditPlusPipeline.from_pretrained(
     MODEL_ID,
     torch_dtype=torch.bfloat16 if DEVICE == "cuda" else torch.float32,
 )
