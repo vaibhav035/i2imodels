@@ -74,9 +74,11 @@ def handler(job):
 
         prompt = job_input["prompt"]
 
-        steps = int(job_input.get("steps", 30))
-
-        guidance = float(job_input.get("guidance_scale", 4.0))
+        num_inference_steps = int(job_input.get("num_inference_steps", 40))
+        true_cfg_scale = float(job_input.get("true_cfg_scale", 4.0))
+        guidance_scale = float(job_input.get("guidance_scale", 1.0))
+        negative_prompt = job_input.get("negative_prompt", " ")
+        num_images_per_prompt = int(job_input.get("num_images_per_prompt", 1))
 
         seed = job_input.get("seed", None)
 
@@ -88,11 +90,14 @@ def handler(job):
         logging.info("Running inference...")
 
         result = pipe(
-            image=image,
+            image=[image],                     # <-- only change to image
             prompt=prompt,
-            num_inference_steps=steps,
-            true_cfg_scale=guidance,
+            negative_prompt=negative_prompt,
             generator=generator,
+            true_cfg_scale=true_cfg_scale,
+            guidance_scale=guidance_scale,
+            num_inference_steps=num_inference_steps,
+            num_images_per_prompt=num_images_per_prompt,
         )
 
         output_image = result.images[0]
