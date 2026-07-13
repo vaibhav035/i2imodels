@@ -89,6 +89,19 @@ def handler(job):
             generator = torch.Generator(device=DEVICE).manual_seed(int(seed))
 
         logging.info("Running inference...")
+        logging.info(
+            {
+                "prompt": prompt,
+                "negative_prompt": negative_prompt,
+                "num_inference_steps": num_inference_steps,
+                "true_cfg_scale": true_cfg_scale,
+                "num_images_per_prompt": num_images_per_prompt,
+                "seed": seed,
+                "image_width": image.width,
+                "image_height": image.height,
+                "device": DEVICE,
+            }
+        )
 
         result = pipe(
             image=[image],                     # <-- only change to image
