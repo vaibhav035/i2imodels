@@ -8,7 +8,7 @@ import torch
 import runpod
 from PIL import Image
 from diffusers import QwenImageEditPlusPipeline
-from tools.prompt_utils import polish_edit_prompt
+from prompt_utils import polish_edit_prompt
 
 logging.basicConfig(level=logging.INFO)
 
